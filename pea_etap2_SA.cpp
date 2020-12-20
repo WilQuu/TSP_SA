@@ -7,7 +7,27 @@
 #include<time.h>
 #include<math.h>
 #include<ctime>
+#include<vector>
 using namespace std;
+
+void randomPath(int* path, int citiesNum) {
+    vector<int> tempNums;
+    for (int i = 1; i < citiesNum; i++)
+        tempNums.push_back(i);
+
+    path[0] = 0;
+    path[citiesNum] = 0;
+    int currentVertex;
+    vector<int> cleaningVector;
+    for (int i = 1; i < citiesNum; i++) {
+        currentVertex = rand() % tempNums.size();
+        vector<int>::iterator it;
+        it = tempNums.begin() + currentVertex;
+        path[i] = tempNums.at(currentVertex);
+        tempNums.erase(it);
+
+    }
+}
 
 void printPath(int arr[], int size) {
 
@@ -36,7 +56,7 @@ int countCost(int* path, int citiesNum, int** cityMatrix) {
     for (int i = 0; i < citiesNum; i++) {
         cost += cityMatrix[path[i]][path[i+1]];
     }
-    cost += cityMatrix[citiesNum-1][path[0]];
+    cost += cityMatrix[path[citiesNum]][path[0]];
     return cost;
 }
 void newPath(int* path,int citiesNum) {
@@ -51,7 +71,30 @@ void newPath(int* path,int citiesNum) {
    // cout << "RandomB = " << randB << endl;
     //cout << "---------------------------------" << endl;
  }
+double startingT(int* path,int citiesNum,int** cityMatrix) {
+    double temperature;
+    int temp = 0;
+    int* tempPath = new int[citiesNum + 1];
+    copyArray(tempPath, path, citiesNum + 1);
+    double solution=0;
+    int counter = 0;
+    for (int i = 1; i < citiesNum; i++) {
+        for (int j = temp; j < citiesNum; j++) {
+            swap(tempPath[i], tempPath[j]);
+            solution+=countCost(path,citiesNum,cityMatrix)-countCost(tempPath, citiesNum, cityMatrix);
+            counter++;
+            copyArray(tempPath, path, citiesNum + 1);
 
+        }
+
+        temp++;
+    }
+    delete[]tempPath;
+    
+    temperature = log((solution / counter) / 0.92);
+    return temperature;
+
+}
 
 int main() {
     srand(time(NULL));
@@ -101,14 +144,14 @@ int main() {
         }
 
         /*    deklarowanie zmiennych potrzebnych do wykonania algorytmu   */
-        double startingTemperature = 10000000.0;
-        double temperature = startingTemperature;
+        double startingTemperature;  //= 99999999999999999999999999999999.0;
+        double temperature;
         double stopTemperature = 0.00001;
         int bestCost, tempCost,currentCost;
         int* bestPath = new int[citiesNum + 1];
         int* currentPath = new int[citiesNum + 1];
         int* tempPath = new int[citiesNum + 1];
-        double annealing = 0.9;
+        double annealing = 0.95;
 
         /* inicjalizacja sciezki poczatkowej */
         for (int i = 0; i <= citiesNum; i++) {
@@ -117,14 +160,18 @@ int main() {
             else
                 currentPath[i] = i; 
         }
-        bestPath = currentPath;
+        
+        randomPath(currentPath, citiesNum);
+        startingTemperature = startingT(currentPath,citiesNum,cityMatrix);
+        temperature = startingTemperature;
+        copyArray(bestPath, currentPath, citiesNum + 1);
         printPath(currentPath, citiesNum+1);
         cout << "Koszt sciezki : " << countCost(currentPath, citiesNum, cityMatrix) << endl;
         double deltaT;
         int L = citiesNum*citiesNum*citiesNum;
         clock_t start = clock();
         /*   tutaj zaczyna sie algorytm SA     */
-
+        cout << "Poczatkowa temperatura to : " << startingTemperature << endl;
         do{
             for (int i = 0; i < L; i++) {
                 copyArray(tempPath, currentPath, citiesNum + 1);
@@ -133,7 +180,7 @@ int main() {
                     copyArray(bestPath, tempPath,citiesNum+1);
                 deltaT = (double)countCost(tempPath, citiesNum, cityMatrix) -(double) countCost(currentPath, citiesNum, cityMatrix);
                 if (deltaT < 0)
-                    currentPath = tempPath;
+                    copyArray(currentPath, tempPath, citiesNum + 1);
                 else {
                     double randomX = static_cast <double> (rand()) / static_cast <double> (RAND_MAX);
                     if (randomX < eulerFun(deltaT, temperature))
@@ -141,20 +188,23 @@ int main() {
                 }   
 
             }
-            
+            if (temperature <= 0.1*startingTemperature)
+                annealing = 0.99;
            temperature =  temperatureFunction(temperature, annealing);
         } while (temperature >= stopTemperature);
               
         
-        double PRD = (double)countCost(bestPath,citiesNum ,cityMatrix) / hamiltonOpt;
-        cout << "Koszt bestPath :" << countCost(bestPath, citiesNum, cityMatrix) << endl;
-        cout << "PRD = " << PRD*100 <<" %"<< endl;
-        printPath(bestPath, citiesNum+1);
+        
         /*   tutaj konczy  sie algorytm SA      */
 
         clock_t stop = clock();
         double  elapsed = (double)(stop - start) / CLOCKS_PER_SEC;
-        cout << elapsed << " [s]";
+        cout << elapsed << " [s]" << endl;
+
+        double PRD = (double)countCost(bestPath, citiesNum, cityMatrix) / hamiltonOpt;
+        cout << "Koszt bestPath :" << countCost(bestPath, citiesNum, cityMatrix) << endl;
+        cout << "PRD = " << PRD * 100 << " %" << endl;
+        printPath(bestPath, citiesNum + 1);
 
         /*        zwalnianie pamieci               */  
         for (int i = 0; i < citiesNum; i++)
