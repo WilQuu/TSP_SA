@@ -171,7 +171,7 @@ int main() {
         printPath(currentPath, citiesNum+1);
         cout << "Koszt sciezki poczatkowej : " << countCost(currentPath, citiesNum, cityMatrix) << endl;
         double deltaT;
-        int L = citiesNum*citiesNum*citiesNum;
+        int L = citiesNum*citiesNum;// *citiesNum* citiesNum;
         int it = 0;
         clock_t start = clock();
         /*   tutaj zaczyna sie algorytm SA     */
